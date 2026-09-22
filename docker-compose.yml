@@ -1,0 +1,46 @@
+services:
+# 1. PostgreSQL Service
+    postgres:
+        image: postgres:16-alpine
+        container_name: deployhub-db
+        restart: always
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgrespassword
+            POSTGRES_DB: deployhub
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        networks:
+            - deployhub-net
+        healthcheck:
+            test: [ "CMD-SHELL", "pg_isready -U postgres -d deployhub" ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+# 2. API Service (Node.js)
+    api:
+        build:
+            context: .
+            dockerfile: docker/Dockerfile
+        container_name: deployhub-api
+        restart: always
+        ports:
+            - "3000:3000"
+        environment:
+            DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/deployhub
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - deployhub-net
+
+# Declarations dial Networks & Volumes
+networks:
+  deployhub-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

@@ -21,7 +21,7 @@ sleep 5
 docker compose ps
 
 echo -e "${YELLOW}[5/5] Running health check...${NC}"
-if curl -f -s http://localhost:3000/health > /dev/null; then
+if curl -f -s http://localhost/health > /dev/null; then
     echo -e "${GREEN}=========================================${NC}"
     echo -e "${GREEN} SUCCESS: Deployment completed successfully!${NC}"
     echo -e "${GREEN}=========================================${NC}"

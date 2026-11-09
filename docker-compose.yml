@@ -1,46 +1,45 @@
+version: '3.8'
+
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
     container_name: deployhub-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: deployhub
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - deployhub-net
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d deployhub" ]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
       timeout: 5s
       retries: 5
 
   api:
-    image: yassineed/deployhub-api:latest
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
+    image: yassineed/deployhub-api:${API_IMAGE_TAG:-latest}
     container_name: deployhub-api
     restart: always
-    expose:
-      - "3000"
     environment:
-      DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/deployhub
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
     networks:
       - deployhub-net
     healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1" ]
-      interval: 10s
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 5s
 
   nginx:
     image: nginx:alpine
@@ -49,17 +48,15 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d
     depends_on:
-      api:
-        condition: service_healthy
+      - api
     networks:
       - deployhub-net
+
+volumes:
+  postgres_data:
 
 networks:
   deployhub-net:
     driver: bridge
-
-volumes:
-  postgres_data:
-    driver: local

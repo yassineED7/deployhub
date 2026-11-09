@@ -18,7 +18,7 @@ else
 fi
 
 # 2. Check Postgres container
-if docker compose ps postgres | grep -q "Up\|healthy"; then
+if docker compose ps db | grep -q "Up\|healthy"; then
     DB_STATE="UP"
 else
     DB_STATE="DOWN"

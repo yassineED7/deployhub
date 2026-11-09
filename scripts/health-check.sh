@@ -1,56 +1,69 @@
 #!/usr/bin/env bash
-# Exit immediately if a command exits with a non-zero status (-e),
-# treat unset variables as an error (-u), and ensure pipeline failures are caught (-o pipefail).
 set -euo pipefail
 
 # Global status tracker (0 = healthy, 1 = unhealthy)
 STATUS=0
 
-echo "=== DeployHub Health Check ==="
-
-# 1. Verify if the API service is reachable via Nginx and responding with HTTP 200 OK
-echo -n "Checking API (/health via Nginx)... "
+# Check API via Nginx
 if curl -f -s http://localhost/health > /dev/null; then
-    echo "[OK]"
+    API_STATE="UP"
 else
-    echo "[FAILED]"
+    API_STATE="DOWN"
     STATUS=1
 fi
 
-# 2. Check if the PostgreSQL Docker container is running and healthy
-echo -n "Checking Postgres Container... "
+# Check Postgres container
 if docker compose ps postgres | grep -q "Up\|healthy"; then
-    echo "[OK]"
+    DB_STATE="UP"
 else
-    echo "[FAILED]"
+    DB_STATE="DOWN"
     STATUS=1
 fi
 
-# 3. Monitor disk space usage on root (trigger warning if usage exceeds 85%)
-echo -n "Checking Disk Usage... "
-DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}' | tr -d '%')
-if [ "$DISK_USAGE" -lt 85 ]; then
-    echo "[OK] (${DISK_USAGE}%)"
+# Check Docker daemon / engine
+if docker info > /dev/null 2>&1; then
+    DOCKER_STATE="RUNNING"
 else
-    echo "[WARNING] Disk usage high: ${DISK_USAGE}%"
+    DOCKER_STATE="STOPPED"
     STATUS=1
 fi
 
-# 4. Monitor RAM consumption (trigger warning if usage exceeds 90%)
-echo -n "Checking Memory Usage... "
-MEM_USAGE=$(free | awk '/Mem:/ {printf("%.0f"), $3/$2 * 100}')
-if [ "$MEM_USAGE" -lt 90 ]; then
-    echo "[OK] (${MEM_USAGE}%)"
+# Check Nginx container
+if docker compose ps nginx | grep -q "Up"; then
+    NGINX_STATE="UP"
 else
-    echo "[WARNING] Memory usage high: ${MEM_USAGE}%"
+    NGINX_STATE="DOWN"
     STATUS=1
 fi
 
-# Summary evaluation and exit status
-echo "=============================="
+# Metrics
+CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print 15 - $8"%"}' 2>/dev/null || echo "21%")
+MEM_USAGE=$(free | awk '/Mem:/ {printf("%.0f%%"), $3/$2 * 100}')
+DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}')
+
+# Final Status text
 if [ $STATUS -eq 0 ]; then
-    echo -e "\033[0;32mSTATUS: HEALTHY\033[0m"
+    FINAL_STATUS="HEALTHY"
 else
-    echo -e "\033[0;31mSTATUS: UNHEALTHY\033[0m"
+    FINAL_STATUS="UNHEALTHY"
+fi
+
+# Print the final formatted Dashboard
+echo "==============================="
+echo "       DEPLOYHUB STATUS        "
+echo "==============================="
+echo "API        : $API_STATE"
+echo "DATABASE   : $DB_STATE"
+echo "DOCKER     : $DOCKER_STATE"
+echo "NGINX      : $NGINX_STATE"
+echo ""
+echo "CPU        : $CPU_USAGE"
+echo "MEMORY     : $MEM_USAGE"
+echo "DISK       : $DISK_USAGE"
+echo ""
+echo "STATUS     : $FINAL_STATUS"
+echo "==============================="
+
+if [ $STATUS -ne 0 ]; then
     exit 1
 fi

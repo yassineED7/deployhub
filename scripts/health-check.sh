@@ -8,9 +8,9 @@ STATUS=0
 
 echo "=== DeployHub Health Check ==="
 
-# 1. Verify if the API service is reachable and responding with HTTP 200 OK
-echo -n "Checking API (/health)... "
-if curl -f -s http://localhost:3000/health > /dev/null; then
+# 1. Verify if the API service is reachable via Nginx and responding with HTTP 200 OK
+echo -n "Checking API (/health via Nginx)... "
+if curl -f -s http://localhost/health > /dev/null; then
     echo "[OK]"
 else
     echo "[FAILED]"

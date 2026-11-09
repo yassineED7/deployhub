@@ -4,7 +4,12 @@ set -euo pipefail
 # Global status tracker (0 = healthy, 1 = unhealthy)
 STATUS=0
 
-# Check API via Nginx
+# Terminal Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+# 1. Check API via Nginx
 if curl -f -s http://localhost/health > /dev/null; then
     API_STATE="UP"
 else
@@ -12,7 +17,7 @@ else
     STATUS=1
 fi
 
-# Check Postgres container
+# 2. Check Postgres container
 if docker compose ps postgres | grep -q "Up\|healthy"; then
     DB_STATE="UP"
 else
@@ -20,7 +25,7 @@ else
     STATUS=1
 fi
 
-# Check Docker daemon / engine
+# 3. Check Docker daemon / engine
 if docker info > /dev/null 2>&1; then
     DOCKER_STATE="RUNNING"
 else
@@ -28,7 +33,7 @@ else
     STATUS=1
 fi
 
-# Check Nginx container
+# 4. Check Nginx container
 if docker compose ps nginx | grep -q "Up"; then
     NGINX_STATE="UP"
 else
@@ -36,16 +41,17 @@ else
     STATUS=1
 fi
 
-# Metrics
-CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print 15 - $8"%"}' 2>/dev/null || echo "21%")
+# Metrics Calculation
+# Corrected CPU Calculation: 100% - idle%
+CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8"%"}' 2>/dev/null || echo "N/A")
 MEM_USAGE=$(free | awk '/Mem:/ {printf("%.0f%%"), $3/$2 * 100}')
 DISK_USAGE=$(df -h / | awk 'NR==2 {print $5}')
 
-# Final Status text
+# Final Status evaluation
 if [ $STATUS -eq 0 ]; then
-    FINAL_STATUS="HEALTHY"
+    FINAL_STATUS="${GREEN}HEALTHY${NC}"
 else
-    FINAL_STATUS="UNHEALTHY"
+    FINAL_STATUS="${RED}UNHEALTHY${NC}"
 fi
 
 # Print the final formatted Dashboard
@@ -61,7 +67,7 @@ echo "CPU        : $CPU_USAGE"
 echo "MEMORY     : $MEM_USAGE"
 echo "DISK       : $DISK_USAGE"
 echo ""
-echo "STATUS     : $FINAL_STATUS"
+echo -e "STATUS     : $FINAL_STATUS"
 echo "==============================="
 
 if [ $STATUS -ne 0 ]; then

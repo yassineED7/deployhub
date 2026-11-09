@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Terminal colores
+# Terminal colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${YELLOW}[1/5] Pulling latest changes and building images...${NC}"
-git pull origin main || true
-docker compose build
+echo -e "${YELLOW}[1/5] Pulling latest images from Docker Hub...${NC}"
+docker compose pull
 
 echo -e "${YELLOW}[2/5] Stopping old containers...${NC}"
-docker compose down 
+docker compose down --remove-orphans
 
 echo -e "${YELLOW}[3/5] Starting new containers...${NC}"
 docker compose up -d

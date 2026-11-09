@@ -1,3 +1,4 @@
+```yaml
 services:
   db:
     image: postgres:16-alpine
@@ -18,7 +19,9 @@ services:
       retries: 5
 
   api:
-    build: ./app
+    build:
+      context: ./app
+      dockerfile: ../docker/Dockerfile
     image: yassineed/deployhub-api:${API_IMAGE_TAG:-latest}
     container_name: deployhub-api
     restart: always
@@ -35,7 +38,11 @@ services:
     networks:
       - deployhub-net
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
       interval: 15s
       timeout: 5s
       retries: 3
@@ -49,8 +56,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       - api
     networks:
@@ -62,3 +69,4 @@ volumes:
 networks:
   deployhub-net:
     driver: bridge
+```

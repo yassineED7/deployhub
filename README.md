@@ -245,6 +245,26 @@ Implementing deployment, backup, rollback, health-check, and cleanup scripts hel
 
 DeployHub was developed to gain practical experience with:
 
+## 📸 Screenshots & Live Demo
+
+### 🔄 CI/CD Pipeline & Registry
+
+| Repository Overview | CI/CD Pipeline Runs | Docker Hub (`latest`) |
+| :---: | :---: | :---: |
+| ![GitHub Repo](assets/screenshots/01-github-repo.png) | ![GitHub Actions CI/CD](assets/screenshots/02-github-actions-cicd.png) | ![Docker Hub Image](assets/screenshots/04-docker-hub-image.png) |
+
+### 🖥️ Homelab Server & Containers
+
+| Ubuntu Server (`homlab`) | Docker Containers & Images | Automated Health Check |
+| :---: | :---: | :---: |
+| ![Ubuntu Server](assets/screenshots/05-ubuntu-server.png) | ![Docker Containers](assets/screenshots/06-docker-containers.png) | ![Health Check](assets/screenshots/08-health-check.png) |
+
+### 🌐 Live API & Verification
+
+| `/health` & `/tasks` Verification | CD Pipeline Details | Nginx Reverse Proxy & HTTPS |
+| :---: | :---: | :---: |
+| ![Running App](assets/screenshots/09-running-app.png) | ![CD Details](assets/screenshots/03-github-actions-cd.png) | ![Nginx HTTPS](assets/screenshots/07-nginx-https.png) |
+
 - Linux server administration and deployment.
 - Docker and container orchestration.
 - CI/CD pipeline implementation.

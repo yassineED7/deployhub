@@ -1,40 +1,59 @@
+
 #!/usr/bin/env bash
-# Exit immediately if a command exits with a non-zero status (-e),
-# treat unset variables as an error (-u), and ensure pipeline failures are caught (-o pipefail).
-set -euo pipefail
+set -Eeuo pipefail
 
-# Define backup directory and generate a timestamped filename
-BACKUP_DIR="./backups"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE="${BACKUP_DIR}/deployhub_backup_${TIMESTAMP}.sql"
+# Always run from the project root
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_DIR"
 
-# Create the backup directory if it does not already exist
-mkdir -p "$BACKUP_DIR"
+BACKUP_DIR="$PROJECT_DIR/backups"
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+BACKUP_FILE="$BACKUP_DIR/deployhub_${TIMESTAMP}.dump"
+TEMP_FILE="${BACKUP_FILE}.tmp"
 
-echo "=== DeployHub Database Backup ==="
-echo "1. Creating PostgreSQL backup..."
+cleanup() {
+    rm -f "$TEMP_FILE"
+}
+trap cleanup EXIT
 
-# Dump the database from inside the running PostgreSQL container
-docker compose exec -T postgres pg_dump -U postgres deployhub > "$BACKUP_FILE"
+echo "=== DeployHub PostgreSQL Backup ==="
 
-# Verify that the backup file exists and is not empty
-if [ -s "$BACKUP_FILE" ]; then
-    echo -e "\033[0;32m[OK] Backup created successfully: ${BACKUP_FILE}\033[0m"
-else
-    echo -e "\033[0;31m[FAILED] Backup failed or file is empty!\033[0m"
-    rm -f "$BACKUP_FILE"
+# Check database container
+if ! docker compose ps --status running --services | grep -qx db; then
+    echo "[ERROR] Database container is not running."
     exit 1
 fi
 
-echo "2. Testing backup restoration on temporary database..."
+mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 
-# Create a temporary database to validate the backup file
-docker compose exec -T postgres psql -U postgres -c "CREATE DATABASE restore_test;" > /dev/null
+echo "[1/3] Creating database backup..."
 
-# Restore the backup file into the temporary test database
-docker compose exec -T postgres psql -U postgres -d restore_test < "$BACKUP_FILE" > /dev/null
+if ! docker compose exec -T db sh -c \
+    'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
+    > "$TEMP_FILE"; then
+    echo "[ERROR] Database backup failed."
+    exit 1
+fi
 
-# Clean up by dropping the temporary test database after successful validation
-docker compose exec -T postgres psql -U postgres -c "DROP DATABASE restore_test;" > /dev/null
+if [[ ! -s "$TEMP_FILE" ]]; then
+    echo "[ERROR] Backup file is empty."
+    exit 1
+fi
 
-echo -e "\033[0;32m[OK] Backup restore test passed successfully!\033[0m"
+echo "[2/3] Validating backup archive..."
+
+if ! docker compose exec -T db pg_restore --list < "$TEMP_FILE" > /dev/null; then
+    echo "[ERROR] Backup archive validation failed."
+    exit 1
+fi
+
+chmod 600 "$TEMP_FILE"
+mv "$TEMP_FILE" "$BACKUP_FILE"
+
+echo "[3/3] Backup completed successfully."
+
+echo "Backup: $BACKUP_FILE"
+echo "Size: $(du -h "$BACKUP_FILE" | cut -f1)"
+echo "Status: SUCCESS"
+

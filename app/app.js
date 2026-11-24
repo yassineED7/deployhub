@@ -14,12 +14,19 @@ app.get('/health', async (req, res) => {
   try {
     // Run a simple query to verify active database connection
     await pool.query('SELECT 1');
-    res.status(200).json({ status: 'UP', database: 'CONNECTED' });
+    res.status(200).json({
+      status: 'UP',
+      database: 'CONNECTED',
+      version: '1.1.0'
+    });
   } catch (err) {
-    res.status(500).json({ status: 'DOWN', database: 'DISCONNECTED', error: err.message });
+    res.status(500).json({
+      status: 'DOWN',
+      database: 'DISCONNECTED',
+      error: err.message
+    });
   }
 });
-
 /**
  * GET /tasks
  * Fetch all tasks sorted by ID in ascending order

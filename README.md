@@ -1,127 +1,258 @@
-🚀 DeployHub — Automated CI/CD Deployment Platform
+# 🚀 DeployHub — Automated CI/CD Deployment Platform
 
-DeployHub is an end-to-end DevOps and deployment automation project built with Docker, Docker Compose, Nginx (HTTPS Reverse Proxy), PostgreSQL, GitHub Actions (CI/CD), and Bash on an Ubuntu Server.
+DeployHub is an end-to-end DevOps project designed to automate application deployment and server operations using modern containerization and CI/CD practices.
 
-🧭 Architecture & CI/CD Flow
+The platform integrates **Docker, Docker Compose, Nginx, PostgreSQL, GitHub Actions, and Bash** to provide an automated deployment workflow on an Ubuntu Server.
+
+## 🧭 Architecture & CI/CD Workflow
 
 ![DeployHub Architecture Diagram](assets/architecture.png)
 
+```text
 Developer
    │
    │ git push (main)
    ▼
 GitHub Actions
-   ├── CI: Install dependencies, run tests, build
-   └── CD: Build & push Docker image → SSH to Ubuntu Server
+   ├── CI: Install dependencies, run tests, and build
+   └── CD: Build & push Docker image → SSH deployment
           │
           ▼
-   Docker Hub (yassineed/deployhub-api)
+Docker Hub
+(yassineed/deployhub-api)
           │
           ▼
-   Ubuntu Server VM (Docker Compose)
-       ┌────┴────────────────┐
-       ▼                     ▼
-  PostgreSQL (db)      API (Node.js :3000)
-                             ▲
-                             │
-                       Nginx (:80 → :443 SSL)
+Ubuntu Server VM
+(Docker Compose)
+   │
+   ├── PostgreSQL (db)
+   │
+   └── API (Node.js :3000)
+          ▲
+          │
+       Nginx
+   (:80 → :443 SSL)
+```
 
+### Deployment Workflow
 
-🛠️ Tech Stack
+1. A developer pushes new code to the `main` branch.
+2. GitHub Actions triggers the CI/CD pipeline.
+3. The CI stage installs dependencies, runs tests, and validates the application build.
+4. The CD stage builds and pushes a Docker image to Docker Hub.
+5. GitHub Actions connects to the Ubuntu Server through SSH.
+6. The deployment process pulls the new image and updates the running application.
+7. Nginx handles HTTPS traffic and forwards requests to the API.
+8. Health checks verify that the application and its services are running correctly.
 
-Application: Node.js REST API (GET /health and /tasks CRUD) + pg client
+## 🛠️ Tech Stack
 
-Database: PostgreSQL 16 (postgres:16-alpine) with persistent Docker volume
+| Component | Technology | Purpose |
+|---|---|---|
+| Application | Node.js | REST API and application logic |
+| API | REST + pg | Health endpoint and Tasks CRUD |
+| Database | PostgreSQL 16 | Persistent relational data storage |
+| Reverse Proxy | Nginx | HTTP/HTTPS traffic management |
+| SSL/TLS | HTTPS | Secure communication |
+| Containerization | Docker | Application containerization |
+| Orchestration | Docker Compose | Multi-container management |
+| CI/CD | GitHub Actions | Automated testing and deployment |
+| Image Registry | Docker Hub | Docker image storage |
+| Server | Ubuntu Server | Deployment environment |
+| Automation | Bash | Deployment and maintenance scripts |
 
-Reverse Proxy & TLS: Nginx (nginx:alpine) redirecting :80 to :443 (SSL/TLS) and forwarding traffic to api:3000
+## ✨ Key Features
 
-Containerization: Docker & Docker Compose
+- **Automated CI/CD:** Build, test, publish, and deploy application updates through GitHub Actions.
+- **Containerized Architecture:** Isolated API and PostgreSQL services managed with Docker Compose.
+- **HTTPS Reverse Proxy:** Nginx redirects HTTP traffic to HTTPS and forwards requests to the API.
+- **Persistent Database:** PostgreSQL data is stored using Docker volumes.
+- **Deployment Automation:** Bash scripts simplify application updates and operational tasks.
+- **Health Monitoring:** Checks application availability, database readiness, Docker, Nginx, and server resources.
+- **Database Backups:** Creates timestamped PostgreSQL backups and verifies their integrity.
+- **Rollback Support:** Restores previous application versions using tagged Docker images.
+- **Safe Cleanup:** Removes unnecessary Docker resources and expired backups while preserving important images.
 
-CI/CD: GitHub Actions (automated tests, image build/push, SSH deployment)
+## 📂 Project Structure
 
-Automation & Ops: Bash scripts (deploy.sh, health-check.sh, backup.sh, rollback.sh, cleanup.sh) on Ubuntu Server
-
-📂 Project Structure
-
+```text
 deployhub/
-├── app/                  # REST API source code and tests
-├── docker/               # Dockerfile and container build config
-├── nginx/                # Nginx HTTP/HTTPS reverse proxy configuration
-├── scripts/              # Operational Bash scripts
-│   ├── deploy.sh         # Zero-downtime-style rollout & health verification
-│   ├── health-check.sh   # API, DB, Docker, Nginx & host metrics check
-│   ├── backup.sh         # PostgreSQL backup creation & integrity check
-│   ├── rollback.sh       # Versioned/tagged image rollback & verification
-│   └── cleanup.sh        # Safe pruning of dangling images, old cache & backups
-├── .github/workflows/    # GitHub Actions CI & CD workflows
-├── docker-compose.yml    # Multi-service stack definition
-└── .env.example          # Environment variable template
+│
+├── app/                      # REST API source code and tests
+│
+├── docker/                   # Dockerfile and build configuration
+│
+├── nginx/                    # Nginx reverse proxy and SSL configuration
+│
+├── scripts/
+│   ├── deploy.sh             # Automated deployment and health verification
+│   ├── health-check.sh       # Application, database and server checks
+│   ├── backup.sh             # PostgreSQL backup and integrity verification
+│   ├── rollback.sh           # Previous version restoration
+│   └── cleanup.sh            # Safe Docker and backup cleanup
+│
+├── .github/
+│   └── workflows/            # GitHub Actions CI/CD workflows
+│
+├── docker-compose.yml        # Multi-service configuration
+│
+└── .env.example              # Environment variable template
+```
 
+## ⚙️ Environment Configuration
 
-⚙️ Environment Variables
+Create your environment configuration file from the provided template:
 
-Copy .env.example to .env and configure your credentials:
-
+```bash
 cp .env.example .env
+```
 
+Configure the required environment variables:
 
-Key variables include:
+```env
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_DB=
 
-POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+DB_HOST=
+DB_PORT=
+DB_USER=
+DB_PASSWORD=
+DB_NAME=
 
-DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+API_IMAGE_TAG=latest
+```
 
-API_IMAGE_TAG (defaults to latest, used during rollbacks)
+**Important:** Keep sensitive credentials in `.env` and GitHub Actions Secrets. Never commit real passwords or deployment credentials to the repository.
 
-🚀 Deployment & Operations
+## 🚀 Deployment & Operations
 
-Start / Manage Stack
+### 1. Start the Application
 
+Start all services in detached mode:
+
+```bash
 docker compose up -d
+```
+
+Check running containers:
+
+```bash
 docker compose ps
+```
+
+View application logs:
+
+```bash
 docker compose logs -f
+```
 
+### 2. Deploy a New Version
 
-Deploy New Version (scripts/deploy.sh)
+Run the deployment script:
 
-Tags the current image as :previous, pulls the latest image, updates services without a full stack down, waits for https://localhost/health, and runs health-check.sh:
-
+```bash
 ./scripts/deploy.sh
+```
 
+The script:
 
-Health Check (scripts/health-check.sh)
+- Tags the current Docker image as `previous`.
+- Pulls the latest application image.
+- Updates the API service without shutting down the entire stack.
+- Waits for the HTTPS health endpoint to become available.
+- Executes the health-check script to verify the deployment.
 
-Checks https://localhost/health, PostgreSQL readiness (pg_isready), Docker daemon, Nginx status, CPU, memory, and disk usage:
+### 3. Run Health Checks
 
+```bash
 ./scripts/health-check.sh
+```
 
+The script monitors:
 
-Database Backup (scripts/backup.sh)
+- API availability through `https://localhost/health`.
+- PostgreSQL readiness using `pg_isready`.
+- Docker daemon status.
+- Nginx service status.
+- CPU, memory, and disk usage.
 
-Creates timestamped PostgreSQL dumps inside backups/ and verifies dump validity:
+### 4. Create a Database Backup
 
+```bash
 ./scripts/backup.sh
+```
 
+The script creates timestamped PostgreSQL dumps inside the `backups/` directory and verifies their integrity.
 
-Rollback (scripts/rollback.sh)
+### 5. Roll Back to a Previous Version
 
-Rolls the api service back to a specified image tag (such as previous or a release tag), verifies /health, and runs a post-rollback health check:
-
+```bash
 ./scripts/rollback.sh previous
+```
 
+The rollback script restores the API using a specified Docker image tag, verifies the health endpoint, and executes a post-rollback health check.
 
-Safe Cleanup (scripts/cleanup.sh)
+### 6. Clean Up Unused Resources
 
-Removes dangling (<untagged>) images, build cache older than 7 days, and backup files older than 7 days—while preserving tagged images and active backups (supports --dry-run):
+Preview cleanup operations:
 
+```bash
 ./scripts/cleanup.sh --dry-run
+```
+
+Execute cleanup:
+
+```bash
 ./scripts/cleanup.sh
+```
 
+The cleanup script targets:
 
-💡 Lessons Learned
+- Dangling Docker images.
+- Build cache older than 7 days.
+- Backup files older than 7 days.
 
-Avoid full-stack downtime and destructive pruning: Replacing docker compose down with docker compose up -d --remove-orphans and replacing docker system prune -f with targeted pruning (docker image prune -f + docker builder prune --filter "until=168h" -f) prevents accidental loss of rollback images and unnecessary service interruptions.
+It preserves tagged Docker images and active backups to avoid accidentally removing resources required for rollback or recovery.
 
-Verify the real HTTPS path: Because Nginx redirects HTTP (:80) to HTTPS (:443), health checks should target https://localhost/health rather than relying on a single sleep or raw HTTP redirect check.
+## 💡 Challenges & Lessons Learned
 
-Keep environment and build paths consistent: Aligning app/db.js environment variables (DB_*) and Dockerfile copy paths (./app build context) with docker-compose.yml prevents runtime connection and build-context mismatches.
+### 1. Minimizing Deployment Downtime
+
+Using `docker compose up -d --remove-orphans` instead of bringing down the entire stack helps avoid unnecessary service interruptions during deployment.
+
+Targeted Docker cleanup also prevents accidentally deleting tagged images needed for rollback.
+
+### 2. Verifying HTTPS Connectivity
+
+Since Nginx redirects HTTP traffic from port `80` to HTTPS on port `443`, health checks must validate the actual HTTPS endpoint:
+
+```bash
+https://localhost/health
+```
+
+This ensures that the reverse proxy and SSL configuration are included in the verification process.
+
+### 3. Maintaining Configuration Consistency
+
+Keeping environment variables consistent across `app/db.js`, `Dockerfile`, and `docker-compose.yml` is essential to avoid database connection errors and Docker build-context issues.
+
+### 4. Building Reliable Operational Scripts
+
+Implementing deployment, backup, rollback, health-check, and cleanup scripts helped me understand how automation improves server maintenance, application reliability, and recovery procedures.
+
+## 🎯 Project Goals
+
+DeployHub was developed to gain practical experience with:
+
+- Linux server administration and deployment.
+- Docker and container orchestration.
+- CI/CD pipeline implementation.
+- Reverse proxy configuration and HTTPS.
+- PostgreSQL database management.
+- Bash scripting and operational automation.
+- Application monitoring, backup, and recovery.
+
+---
+
+**DeployHub — From Code to Production, Automatically.**
